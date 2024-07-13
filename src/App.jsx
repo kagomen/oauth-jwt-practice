@@ -1,15 +1,19 @@
 import axios from 'axios'
+import SignUpForm from './components/SignUpForm'
+import SignInForm from './components/SignInForm'
 
 function App() {
-  async function test() {
+  async function test(e) {
+    e.preventDefault()
     const res = await axios.get('/test')
     console.log(res.data)
   }
 
   return (
-    <>
-      <button onClick={test}>test!</button>
-    </>
+    <div>
+      <SignUpForm />
+      <SignInForm />
+    </div>
   )
 }
 
