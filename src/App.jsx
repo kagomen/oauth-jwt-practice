@@ -1,18 +1,13 @@
-import axios from 'axios'
 import SignUpForm from './components/SignUpForm'
 import SignInForm from './components/SignInForm'
+import UserInfo from './components/UserInfo'
 
 function App() {
-  async function test(e) {
-    e.preventDefault()
-    const res = await axios.get('/test')
-    console.log(res.data)
-  }
-
   return (
     <div>
       <SignUpForm />
       <SignInForm />
+      <UserInfo />
     </div>
   )
 }

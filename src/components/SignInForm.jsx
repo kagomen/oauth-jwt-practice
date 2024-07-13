@@ -1,32 +1,27 @@
-import axios from 'axios'
 import { useState } from 'react'
+import { useAuth } from '../context/AuthContext'
 
 function SignInForm() {
   const [email, setEmail] = useState('')
-  const [pass, setPass] = useState('')
+  const [password, setPassword] = useState('')
+  const { signIn } = useAuth()
 
-  async function signIn(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
-    const signInData = {
-      email: email,
-      password: pass,
-    }
-    const res = await axios.post('/api/sign-in', signInData)
-    console.log(res.data)
-
-    setEmail('')
-    setPass('')
+    await signIn(email, password)
+    // setEmail('')
+    // setPassword('')
   }
 
   return (
-    <form onSubmit={signIn}>
+    <form onSubmit={handleSubmit}>
       <input
         onChange={(e) => setEmail(e.target.value)}
         type="email"
         placeholder="email"
       />
       <input
-        onChange={(e) => setPass(e.target.value)}
+        onChange={(e) => setPassword(e.target.value)}
         type="password"
         placeholder="password"
       />

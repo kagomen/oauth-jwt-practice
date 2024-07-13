@@ -15,8 +15,12 @@ function SignUpForm() {
       const res = await axios.post('/api/sign-up', signUpData)
       console.log(res.data)
 
-      setEmail('')
-      setPass('')
+      // access tokenをlocalStorageに保存
+      const { accessToken } = res.data
+      localStorage.setItem('accessToken', accessToken)
+
+      // setEmail('')
+      // setPass('')
     } catch (err) {
       throw new Error(err.message)
     }

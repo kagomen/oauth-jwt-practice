@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { compare, hash } from 'bcryptjs'
-import { jwt, sign } from 'hono/jwt'
+import { sign } from 'hono/jwt'
 import { zValidator } from '@hono/zod-validator'
 import users from './db/users'
 import userSchema from './lib/userSchema'
@@ -30,7 +30,7 @@ app.post('/sign-up', zValidator('json', userSchema), async (c) => {
   // DBにemailが既に登録されていないか確認
   const user = users.find((user) => user.email === email)
   if (user) {
-    return c.json({ msg: 'すでにそのユーザーは存在しています' })
+    return c.json({ message: 'すでにそのユーザーは存在しています' }, 401)
   }
 
   // passwordのハッシュ化
@@ -43,6 +43,7 @@ app.post('/sign-up', zValidator('json', userSchema), async (c) => {
   const accessToken = await sign(
     {
       email,
+      exp: Math.floor(Date.now() / 1000) + 60 * 15, // 15分後に期限切れ
     },
     c.env.JWT_ACCESS_TOKEN_SECRET
   )
@@ -51,6 +52,7 @@ app.post('/sign-up', zValidator('json', userSchema), async (c) => {
   const refreshToken = await sign(
     {
       email,
+      exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7, // 7日後に期限切れ
     },
     c.env.JWT_REFRESH_TOKEN_SECRET
   )
@@ -67,24 +69,50 @@ app.post('/sign-up', zValidator('json', userSchema), async (c) => {
   return c.json({ email, accessToken })
 })
 
-app.post('/sign-in', async (c) => {
-  const { email, password } = await c.req.json()
+app.post('/sign-in', zValidator('json', userSchema), async (c) => {
+  // email, passwordのバリデーションチェック
+  const { email, password } = c.req.valid('json')
 
   // emailを確認
   const user = users.find((user) => user.email === email)
   if (!user) {
-    return c.json({ msg: 'そのメールアドレスは登録されていません' })
+    return c.json({ message: 'そのメールアドレスは登録されていません' }, 401)
   }
 
   // passwordをcompare, 確認
   const isMatched = await compare(password, user.password)
-  if (isMatched) {
-    // tokenの発行
-    // access tokenをlocalStorageに保存
 
-    return c.json({ msg: 'ログインに成功しました' })
+  if (isMatched) {
+    // access tokenの発行
+    const accessToken = await sign(
+      {
+        email,
+        exp: Math.floor(Date.now() / 1000) + 60 * 15, // 15分後に期限切れ
+      },
+      c.env.JWT_ACCESS_TOKEN_SECRET
+    )
+
+    // refresh tokenの発行
+    const refreshToken = await sign(
+      {
+        email,
+        exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7, // 7日後に期限切れ
+      },
+      c.env.JWT_REFRESH_TOKEN_SECRET
+    )
+
+    // refresh tokenをHTTP Onlyのcookieとして設定
+    setCookie(c, 'refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'Strict',
+      maxAge: 7 * 24 * 60 * 60, // 7日間（秒単位）
+      path: '/',
+    })
+
+    return c.json({ email, accessToken })
   } else {
-    return c.json({ msg: 'ログインに失敗しました' })
+    return c.json({ message: 'ログインに失敗しました' }, 401)
   }
 })
 
