@@ -1,8 +1,26 @@
-# React + Vite
+## withCredentials
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+サーバーサイドと Cookie のやりとりをする場合、axios で option が必要
 
-Currently, two official plugins are available:
+```js
+async function reissueAccessToken() {
+  const res = await axios.post(
+    '/api/reissue-access-token',
+    {}, // 第2引数はリクエストボディ
+    { withCredentials: true } // 第3引数にoption
+  )
+}
+```
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+もしくは以下のように設定しても良い
+
+```js
+const api = axios.create({
+  baseURL: '/api',
+  withCredentials: true,
+})
+
+// 使用する際は api.post('reissue-access-token', ...) とする
+```
+
+開発環境で option の指定をしなくても Cookie のやりとりができているのは、`vite.config.js`にて proxy 設定をしているから？
