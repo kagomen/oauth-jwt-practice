@@ -14,7 +14,16 @@ function SignInForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form
+      onSubmit={handleSubmit}
+      style={{
+        width: '300px',
+        margin: '0 auto',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+      }}
+    >
       <input
         onChange={(e) => setEmail(e.target.value)}
         type="email"
@@ -25,7 +34,7 @@ function SignInForm() {
         type="password"
         placeholder="password"
       />
-      <button>sign in</button>
+      <button>ログイン</button>
     </form>
   )
 }

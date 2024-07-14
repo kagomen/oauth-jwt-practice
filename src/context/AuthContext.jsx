@@ -8,10 +8,20 @@ export function AuthProvider({ children }) {
   const [accessToken, setAccessToken] = useState(null)
   const [user, setUser] = useState(null)
 
+  async function signUp(email, password) {
+    try {
+      const res = await axios.post('/api/sign-up', { email, password })
+      setAccessToken(res.data.accessToken)
+      setUser(res.data.email)
+      console.log('新規登録完了', res.data)
+    } catch (err) {
+      console.error(err.response.data.message)
+    }
+  }
+
   async function signIn(email, password) {
     try {
       const res = await axios.post('/api/sign-in', { email, password })
-      // 正常にサインインした場合の処理
       setAccessToken(res.data.accessToken)
       setUser(res.data.email)
       console.log('ログイン成功:', res.data)
@@ -21,12 +31,16 @@ export function AuthProvider({ children }) {
   }
 
   async function signOut() {
+    // リフレッシュトークンを無効化
+
     setAccessToken(null)
     setUser(null)
   }
 
   return (
-    <AuthContext.Provider value={{ accessToken, user, signIn, signOut }}>
+    <AuthContext.Provider
+      value={{ accessToken, user, signUp, signIn, signOut }}
+    >
       {children}
     </AuthContext.Provider>
   )

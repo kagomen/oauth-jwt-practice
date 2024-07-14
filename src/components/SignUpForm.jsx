@@ -1,44 +1,38 @@
-import axios from 'axios'
 import { useState } from 'react'
+import { useAuth } from '../context/AuthContext'
 
 function SignUpForm() {
   const [email, setEmail] = useState('')
-  const [pass, setPass] = useState('')
+  const [password, setPassword] = useState('')
+  const { signUp } = useAuth()
 
-  async function signUp(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
-    const signUpData = {
-      email: email,
-      password: pass,
-    }
-    try {
-      const res = await axios.post('/api/sign-up', signUpData)
-      console.log(res.data)
-
-      // access tokenをlocalStorageに保存
-      const { accessToken } = res.data
-      localStorage.setItem('accessToken', accessToken)
-
-      // setEmail('')
-      // setPass('')
-    } catch (err) {
-      throw new Error(err.message)
-    }
+    await signUp(email, password)
   }
 
   return (
-    <form onSubmit={signUp}>
+    <form
+      onSubmit={handleSubmit}
+      style={{
+        width: '300px',
+        margin: '0 auto',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+      }}
+    >
       <input
         onChange={(e) => setEmail(e.target.value)}
         type="email"
         placeholder="email"
       />
       <input
-        onChange={(e) => setPass(e.target.value)}
+        onChange={(e) => setPassword(e.target.value)}
         type="password"
         placeholder="password"
       />
-      <button>sign up</button>
+      <button>新規登録</button>
     </form>
   )
 }

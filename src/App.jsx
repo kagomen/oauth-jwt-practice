@@ -1,13 +1,11 @@
-import SignUpForm from './components/SignUpForm'
-import SignInForm from './components/SignInForm'
-import UserInfo from './components/UserInfo'
+import Header from './components/layouts/Header'
+import { Outlet } from 'react-router-dom'
 
 function App() {
   return (
     <div>
-      <SignUpForm />
-      <SignInForm />
-      <UserInfo />
+      <Header />
+      <Outlet />
     </div>
   )
 }
