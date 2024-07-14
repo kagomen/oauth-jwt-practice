@@ -70,58 +70,60 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  const checkAuthStatus = useCallback(async () => {
-    if (accessToken) {
-      // アクセストークンがある場合、有効期限をチェック
-      const decodedAccessToken = jwtDecode(accessToken)
-      if (Date.now() >= decodedAccessToken.exp * 1000) {
-        await reissueAccessToken()
+  // アクセストークンを使用するAPIリクエストのためのラッパー関数
+  // await authRequest(post, '/api/sign-up', { email, password }) のようにして使用する
+  const authRequest = useCallback(
+    async (method, url, data = null) => {
+      const config = {
+        method,
+        url,
+        data,
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+        withCredentials: true,
       }
-    } else {
-      // アクセストークンがない場合、リフレッシュトークンを使って再取得を試みる
       try {
-        await reissueAccessToken()
+        const res = await axios(config)
+        return res.data
       } catch (error) {
-        console.error('自動ログインに失敗しました:', error)
+        if (error.response && error.response.status === 401) {
+          const newToken = await reissueAccessToken()
+          if (newToken) {
+            config.headers.Authorization = `Bearer ${newToken}`
+            return axios(config)
+          }
+        }
+        throw error
+      }
+    },
+    [accessToken, reissueAccessToken]
+  )
+
+  // ログイン状態のチェックをコンポーネントのマウント時に実行
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      if (!accessToken) {
+        // アクセストークンがない場合、リフレッシュトークンを使って再取得を試みる
+        try {
+          await reissueAccessToken()
+        } catch (error) {
+          console.error('自動ログインに失敗しました:', error)
+          // 必要に応じて、ログインページにリダイレクトするなどの処理を追加
+        }
+      } else {
+        // アクセストークンがある場合は有効期限をチェック
+        const decodedAccessToken = jwtDecode(accessToken)
+        if (Date.now() >= decodedAccessToken.exp * 1000) {
+          await reissueAccessToken()
+        }
       }
     }
-  }, [accessToken, reissueAccessToken])
 
-  // アクセストークンを使用するAPIリクエストのためのラッパー関数
-  // const authRequest = useCallback(
-  //   async (method, url, data = null) => {
-  //     try {
-  //       const config = {
-  //         method,
-  //         url,
-  //         data,
-  //         headers: accessToken
-  //           ? { Authorization: `Bearer ${accessToken}` }
-  //           : {},
-  //       }
-  //       const response = await api(config)
-  //       return response.data
-  //     } catch (error) {
-  //       if (error.response && error.response.status === 401) {
-  //         const newToken = await reissueAccessToken()
-  //         if (newToken) {
-  //           config.headers.Authorization = `Bearer ${newToken}`
-  //           return api(config)
-  //         }
-  //       }
-  //       throw error
-  //     }
-  //   },
-  //   [accessToken, reissueAccessToken]
-  // )
-
-  useEffect(() => {
     checkAuthStatus()
-  }, [checkAuthStatus])
+  }, [accessToken, reissueAccessToken])
 
   return (
     <AuthContext.Provider
-      value={{ accessToken, user, signUp, signIn, signOut }}
+      value={{ accessToken, user, signUp, signIn, signOut, authRequest }}
     >
       {children}
     </AuthContext.Provider>

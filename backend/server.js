@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { compare, hash } from 'bcryptjs'
-import { sign, verify } from 'hono/jwt'
+import { jwt, sign, verify } from 'hono/jwt'
 import { zValidator } from '@hono/zod-validator'
 import users from './db/users'
 import userSchema from './lib/userSchema'
@@ -160,9 +160,20 @@ app.post('/sign-out', (c) => {
 })
 
 // 保護されたルートの例
-// app.get('/protected', verifyJWT, (c) => {
-//   const user = c.get('user')
-//   return c.json({ message: `こんにちは、${user.email}さん` })
-// })
+app.use('/protected', async (c, next) => {
+  const authHeader = c.req.header('Authorization')
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return c.json({ message: '無効な認証ヘッダーです' }, 401)
+  }
+
+  const middleware = jwt({
+    secret: c.env.JWT_ACCESS_TOKEN_SECRET,
+  })
+  return middleware(c, next)
+})
+app.get('/protected', (c) => {
+  const payload = c.get('jwtPayload')
+  return c.json({ message: `${payload.email}でログイン中です` })
+})
 
 export default app
