@@ -48,9 +48,6 @@ export function AuthProvider({ children }) {
       setAccessToken(null)
       setUser(null)
     }
-
-    setAccessToken(null)
-    setUser(null)
   }
 
   const reissueAccessToken = useCallback(async () => {
@@ -69,6 +66,29 @@ export function AuthProvider({ children }) {
       signOut()
     }
   }, [])
+
+  // ログイン状態のチェックをコンポーネントのマウント時に実行
+  const checkAuthStatus = useCallback(async () => {
+    if (!accessToken) {
+      // アクセストークンがない場合、リフレッシュトークンを使って再取得を試みる
+      try {
+        await reissueAccessToken()
+      } catch (error) {
+        console.error('自動ログインに失敗しました:', error)
+        // 必要に応じて、ログインページにリダイレクトするなどの処理を追加
+      }
+    } else {
+      // アクセストークンがある場合は有効期限をチェック
+      const decodedAccessToken = jwtDecode(accessToken)
+      if (Date.now() >= decodedAccessToken.exp * 1000) {
+        await reissueAccessToken()
+      }
+    }
+  }, [accessToken, reissueAccessToken])
+
+  useEffect(() => {
+    checkAuthStatus()
+  }, [checkAuthStatus])
 
   // アクセストークンを使用するAPIリクエストのためのラッパー関数
   // await authRequest(post, '/api/sign-up', { email, password }) のようにして使用する
@@ -98,32 +118,17 @@ export function AuthProvider({ children }) {
     [accessToken, reissueAccessToken]
   )
 
-  // ログイン状態のチェックをコンポーネントのマウント時に実行
-  useEffect(() => {
-    const checkAuthStatus = async () => {
-      if (!accessToken) {
-        // アクセストークンがない場合、リフレッシュトークンを使って再取得を試みる
-        try {
-          await reissueAccessToken()
-        } catch (error) {
-          console.error('自動ログインに失敗しました:', error)
-          // 必要に応じて、ログインページにリダイレクトするなどの処理を追加
-        }
-      } else {
-        // アクセストークンがある場合は有効期限をチェック
-        const decodedAccessToken = jwtDecode(accessToken)
-        if (Date.now() >= decodedAccessToken.exp * 1000) {
-          await reissueAccessToken()
-        }
-      }
-    }
-
-    checkAuthStatus()
-  }, [accessToken, reissueAccessToken])
-
   return (
     <AuthContext.Provider
-      value={{ accessToken, user, signUp, signIn, signOut, authRequest }}
+      value={{
+        accessToken,
+        user,
+        signUp,
+        signIn,
+        signOut,
+        checkAuthStatus,
+        authRequest,
+      }}
     >
       {children}
     </AuthContext.Provider>

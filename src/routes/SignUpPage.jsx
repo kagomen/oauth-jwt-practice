@@ -7,7 +7,7 @@ function SignUpPage() {
   return (
     <div>
       {user ? (
-        <Navigate to="/user-page" replace={true} />
+        <Navigate to={`/${user}`} replace={true} />
       ) : (
         <div style={{ textAlign: 'center' }}>
           <h3>新規登録</h3>

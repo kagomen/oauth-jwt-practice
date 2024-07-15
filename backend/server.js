@@ -1,10 +1,11 @@
 import { Hono } from 'hono'
 import { compare, hash } from 'bcryptjs'
-import { jwt, sign, verify } from 'hono/jwt'
+import { sign, verify } from 'hono/jwt'
 import { zValidator } from '@hono/zod-validator'
 import users from './db/users'
 import userSchema from './lib/userSchema'
 import { getCookie, setCookie } from 'hono/cookie'
+import { protectedMiddleware } from './middleware'
 
 const app = new Hono()
 
@@ -160,20 +161,26 @@ app.post('/sign-out', (c) => {
 })
 
 // 保護されたルートの例
-app.use('/protected', async (c, next) => {
-  const authHeader = c.req.header('Authorization')
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return c.json({ message: '無効な認証ヘッダーです' }, 401)
-  }
-
-  const middleware = jwt({
-    secret: c.env.JWT_ACCESS_TOKEN_SECRET,
-  })
-  return middleware(c, next)
-})
+app.use('/protected', protectedMiddleware)
 app.get('/protected', (c) => {
   const payload = c.get('jwtPayload')
   return c.json({ message: `${payload.email}でログイン中です` })
+})
+
+// ユーザー固有のエンドポイント
+app.get('/user/:userName', protectedMiddleware, async (c) => {
+  const payload = c.get('jwtPayload')
+  const requestedUsername = c.req.param('userName')
+  const authenticatedUsername = payload.email
+
+  if (authenticatedUsername !== requestedUsername) {
+    return c.json({ message: 'アクセス権限がありません' }, 403)
+  }
+
+  return c.json({
+    message: `${authenticatedUsername}のユーザーページです`,
+    email: payload.email,
+  })
 })
 
 export default app
