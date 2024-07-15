@@ -17,7 +17,7 @@ export function AuthProvider({ children }) {
 
   async function signUp(email, password) {
     try {
-      const res = await axios.post('/api/sign-up', { email, password })
+      const res = await axios.post('/api/auth/sign-up', { email, password })
       setAccessToken(res.data.accessToken)
       setUser(res.data.email)
       console.log('新規登録完了', res.data)
@@ -28,7 +28,7 @@ export function AuthProvider({ children }) {
 
   async function signIn(email, password) {
     try {
-      const res = await axios.post('/api/sign-in', { email, password })
+      const res = await axios.post('/api/auth/sign-in', { email, password })
       setAccessToken(res.data.accessToken)
       setUser(res.data.email)
       console.log('ログイン成功:', res.data)
@@ -40,7 +40,7 @@ export function AuthProvider({ children }) {
   async function signOut() {
     try {
       // リフレッシュトークンを無効化
-      await axios.post('/api/sign-out')
+      await axios.post('/api/auth/sign-out')
       console.log('リフレッシュトークンを無効化しました')
     } catch (error) {
       console.error('リフレッシュトークンを無効化できませんでした', error)
@@ -53,12 +53,13 @@ export function AuthProvider({ children }) {
   const reissueAccessToken = useCallback(async () => {
     try {
       const res = await axios.post(
-        '/api/reissue-access-token',
+        '/api/auth/reissue-access-token',
         {},
         {
           withCredentials: true,
         }
       )
+      console.log(res)
       setAccessToken(res.data.accessToken)
       setUser(res.data.email)
     } catch (error) {
@@ -91,7 +92,6 @@ export function AuthProvider({ children }) {
   }, [checkAuthStatus])
 
   // アクセストークンを使用するAPIリクエストのためのラッパー関数
-  // await authRequest(post, '/api/sign-up', { email, password }) のようにして使用する
   const authRequest = useCallback(
     async (method, url, data = null) => {
       const config = {

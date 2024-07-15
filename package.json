@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:backend": "wrangler dev backend/server.js --compatibility-date=2024-07-12 --port=8787",
+    "dev:backend": "wrangler dev backend/app.js --compatibility-date=2024-07-12 --port=8787",
     "build": "vite build",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
