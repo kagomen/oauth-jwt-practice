@@ -1,6 +1,5 @@
 import { compare, hash } from 'bcryptjs'
 import { sign, verify } from 'hono/jwt'
-import users from '../db/users'
 import { getCookie, setCookie } from 'hono/cookie'
 
 const createAccessToken = async (c, email) => {
@@ -23,12 +22,20 @@ const createRefreshToken = async (c, email) => {
   )
 }
 
+async function getUser(c, email) {
+  return await c.env.KV.get(email, { type: 'json' })
+}
+
+async function saveUser(c, email, userData) {
+  await c.env.KV.put(email, JSON.stringify(userData))
+}
+
 export const signUp = async (c) => {
   // email, passwordのバリデーションチェック
   const { email, password } = c.req.valid('json')
 
-  // DBにemailが既に登録されていないか確認
-  const user = users.find((user) => user.email === email)
+  // KVに既にユーザ登録されていないかを確認
+  const user = await getUser(c, email)
   if (user) {
     return c.json({ message: 'すでにそのユーザーは存在しています' }, 401)
   }
@@ -36,8 +43,8 @@ export const signUp = async (c) => {
   // passwordのハッシュ化
   const hashedPassword = await hash(password, 8)
 
-  // DBに保存
-  users.push({ email, password: hashedPassword })
+  // KVに保存
+  await saveUser(c, email, { email, password: hashedPassword })
 
   // access tokenの発行
   const accessToken = await createAccessToken(c, email)
@@ -61,13 +68,13 @@ export const signIn = async (c) => {
   // email, passwordのバリデーションチェック
   const { email, password } = c.req.valid('json')
 
-  // emailを確認
-  const user = users.find((user) => user.email === email)
+  // KVからユーザを確認
+  const user = await getUser(c, email)
   if (!user) {
     return c.json({ message: 'そのメールアドレスは登録されていません' }, 401)
   }
 
-  // passwordをcompare, 確認
+  // 入力されたpasswordとKVに保存されたhashedPasswordが同じであるか確認
   const isMatched = await compare(password, user.password)
 
   if (isMatched) {

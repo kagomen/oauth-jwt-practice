@@ -1,3 +1,15 @@
 [vars]
 DEV_MODE=false
 ALLOWED_ORIGIN=""
+
+# Bind a D1 database. D1 is Cloudflare’s native serverless SQL database.
+# Docs: https://developers.cloudflare.com/workers/wrangler/configuration/#d1-databases
+# [[d1_databases]]
+# binding = "MY_DB"
+# database_name = "my-database"
+# database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "14d20edad605405b9353331926dff28b"
+preview_id = "918e47c1a4ff4fea97b27f8bd36359fc"

@@ -59,3 +59,24 @@ const api = axios.create({
   - SHA-512 が最も安全性が高く、SHA-256 が最も利用されている
 - SHA-3
   - 2015 年に正式版が公表された最新のハッシュ関数
+
+## Cloudflare KV
+
+- プレビュー環境が欲しい場合
+
+  - 本番環境はデプロイしないと動かない
+  - とは言ってもプレビュー環境も KV に値が保存されるわけではない
+
+  ```
+  npx wrangler kv:namespace create KV
+  npx wrangler kv:namespace create KV --preview  // KVはbinding名
+  ```
+
+  - ターミナルに表示されたものを、wrangler.toml に記述
+
+  ```
+  [[kv_namespaces]]
+  binding = "KV"
+  id = "XXXXXXXXXXX"  // こっちは本番環境用, プレビュー環境だけ設定するとエラーが出るので指定する
+  preview_id = "XXXXXXXXXXXXXX"
+  ```
