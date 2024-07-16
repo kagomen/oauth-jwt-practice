@@ -27,7 +27,39 @@ async function getUser(c, email) {
 }
 
 async function saveUser(c, email, userData) {
-  await c.env.KV.put(email, JSON.stringify(userData))
+  return await c.env.KV.put(email, JSON.stringify(userData))
+}
+
+export const handleGoogleAuth = async (c) => {
+  // const token = c.get('token')  // token を取得することで、ユーザに代わってAPIを操作できる。今回はしない。
+  const user = c.get('user-google')
+
+  const email = user.email
+
+  let existingUser = await getUser(c, email)
+
+  // もしKVに重複して登録されていなければ保存する
+  if (!existingUser) {
+    await saveUser(c, email, { email, googleId: user.id })
+  } else {
+    return c.json({
+      message:
+        '既に登録されたユーザーです。ログインページからメールアドレスとパスワードでログインしてください。もしくは新しいGoogleアカウントで再試行してください。',
+    })
+  }
+
+  const accessToken = await createAccessToken(c, email)
+  const refreshToken = await createRefreshToken(c, email)
+
+  setCookie(c, 'refreshToken', refreshToken, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'Strict',
+    maxAge: 7 * 24 * 60 * 60,
+    path: '/',
+  })
+
+  return c.json({ email, accessToken })
 }
 
 export const signUp = async (c) => {
@@ -37,14 +69,21 @@ export const signUp = async (c) => {
   // KVに既にユーザ登録されていないかを確認
   const user = await getUser(c, email)
   if (user) {
-    return c.json({ message: 'すでにそのユーザーは存在しています' }, 401)
+    if (user?.googleId) {
+      return c.json({ message: 'このGoogleアカウントは既に登録されています' })
+    }
+    return c.json({ message: 'そのメールアドレスは既に登録済みです' }, 401)
   }
 
-  // passwordのハッシュ化
-  const hashedPassword = await hash(password, 8)
-
-  // KVに保存
-  await saveUser(c, email, { email, password: hashedPassword })
+  if (user?.googleId) {
+    // Googleでログインした際のKVへの保存
+    await saveUser(c, email, { email, googleId: user.googleId })
+  } else {
+    // passwordのハッシュ化
+    const hashedPassword = await hash(password, 8)
+    // KVに保存
+    await saveUser(c, email, { email, password: hashedPassword })
+  }
 
   // access tokenの発行
   const accessToken = await createAccessToken(c, email)
