@@ -9,7 +9,7 @@ function SignUpForm() {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    await signUp(email, password)
+    await signUp({ email, password })
   }
 
   return (

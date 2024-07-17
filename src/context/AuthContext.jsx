@@ -1,13 +1,8 @@
 /* eslint-disable react/prop-types */
+import { useMutation, useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 import { jwtDecode } from 'jwt-decode'
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-} from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 
 const AuthContext = createContext()
 
@@ -15,133 +10,138 @@ export function AuthProvider({ children }) {
   const [accessToken, setAccessToken] = useState(null)
   const [user, setUser] = useState(null)
 
-  async function signUp(email, password) {
-    try {
-      const res = await axios.post('/api/auth/sign-up', { email, password })
+  const signUpMutation = useMutation({
+    mutationFn: (credentials) => axios.post('/api/auth/sign-up', credentials),
+    onSuccess: (res) => {
       setAccessToken(res.data.accessToken)
       setUser(res.data.email)
       console.log('新規登録完了', res.data)
-    } catch (err) {
-      console.error(err.response.data.message)
-    }
-  }
+    },
+    onError: (err) =>
+      console.error('新規登録に失敗しました', err.response.data.message),
+  })
 
-  async function signIn(email, password) {
-    try {
-      const res = await axios.post('/api/auth/sign-in', { email, password })
+  const signInMutation = useMutation({
+    mutationFn: (credentials) => axios.post('/api/auth/sign-in', credentials),
+    onSuccess: (res) => {
       setAccessToken(res.data.accessToken)
       setUser(res.data.email)
       console.log('ログイン成功:', res.data)
-    } catch (err) {
-      console.error(err.response.data.message)
-    }
-  }
+    },
+    onError: (err) =>
+      console.error('ログインに失敗しました', err.response.data.message),
+  })
 
-  async function signOut() {
-    try {
-      // リフレッシュトークンを無効化
-      await axios.post('/api/auth/sign-out')
-      console.log('リフレッシュトークンを無効化しました')
-    } catch (error) {
-      console.error('リフレッシュトークンを無効化できませんでした', error)
-    } finally {
+  const signOutMutation = useMutation({
+    mutationFn: () => axios.post('/api/auth/sign-out'),
+    onSuccess: () => {
       setAccessToken(null)
       setUser(null)
-    }
-  }
+      console.log('リフレッシュトークンを無効化しました')
+    },
+    onError: (err) => {
+      setAccessToken(null)
+      setUser(null)
+      console.error('リフレッシュトークンを無効化できませんでした', err)
+    },
+  })
 
-  const reissueAccessToken = useCallback(async () => {
-    try {
-      const res = await axios.post(
+  const reissueAccessTokenMutation = useMutation({
+    mutationFn: () =>
+      axios.post(
         '/api/auth/reissue-access-token',
         {},
-        {
-          withCredentials: true,
-        }
-      )
-      console.log(res)
+        { withCredentials: true }
+      ),
+    onSuccess: (res) => {
       setAccessToken(res.data.accessToken)
       setUser(res.data.email)
-    } catch (error) {
-      console.error('アクセストークンの再発行に失敗しました', error)
-      signOut()
-    }
-  }, [])
+      console.log('アクセストークンを再発行しました')
+    },
+    onError: (err) => {
+      console.error('アクセストークンの再発行に失敗しました', err)
+      signOutMutation.mutate()
+    },
+  })
 
   // ログイン状態のチェックをコンポーネントのマウント時に実行
-  const checkAuthStatus = useCallback(async () => {
-    if (!accessToken) {
-      // アクセストークンがない場合、リフレッシュトークンを使って再取得を試みる
-      try {
-        await reissueAccessToken()
-      } catch (error) {
-        console.error('自動ログインに失敗しました:', error)
-        // 必要に応じて、ログインページにリダイレクトするなどの処理を追加
+  const { refetch: checkAuthStatus } = useQuery({
+    queryKey: ['authStatus'],
+    queryFn: async () => {
+      console.log('checkAuthStatus実行')
+      if (!accessToken) {
+        // アクセストークンがない場合、リフレッシュトークンを使って再取得を試みる
+        await reissueAccessTokenMutation.mutateAsync()
+      } else {
+        // アクセストークンがある場合は有効期限をチェック
+        const decodedAccessToken = jwtDecode(accessToken)
+        if (Date.now() >= decodedAccessToken.exp * 1000) {
+          await reissueAccessTokenMutation.mutateAsync()
+        } else {
+          console.log('アクセストークンは有効です')
+        }
       }
-    } else {
-      // アクセストークンがある場合は有効期限をチェック
-      const decodedAccessToken = jwtDecode(accessToken)
-      if (Date.now() >= decodedAccessToken.exp * 1000) {
-        await reissueAccessToken()
-      }
-    }
-  }, [accessToken, reissueAccessToken])
+      return { isAuthenticated: !!accessToken }
+    },
+    enabled: true, // 自動リフェッチを有効
+    retry: false,
+    refetchOnWindowFocus: true,
+    staleTime: 10 * 60 * 1000, // 10分間はデータを新鮮とみなす
+  })
 
   useEffect(() => {
     checkAuthStatus()
   }, [checkAuthStatus])
 
   // アクセストークンを使用するAPIリクエストのためのラッパー関数
-  const authRequest = useCallback(
-    async (method, url, data = null) => {
-      const config = {
-        method,
-        url,
-        data,
-        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
-        withCredentials: true,
-      }
-      try {
-        const res = await axios(config)
-        return res.data
-      } catch (error) {
-        if (error.response && error.response.status === 401) {
-          const newToken = await reissueAccessToken()
-          if (newToken) {
-            config.headers.Authorization = `Bearer ${newToken}`
-            return axios(config)
-          }
-        }
-        throw error
-      }
-    },
-    [accessToken, reissueAccessToken]
-  )
-
-  async function googleSignIn(credentialResponse) {
+  const authRequest = async (method, url, data = null) => {
+    const config = {
+      method,
+      url,
+      data,
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+      withCredentials: true,
+    }
     try {
-      const res = await axios.post('/api/auth/google', {
+      const res = await axios(config)
+      return res.data
+    } catch (error) {
+      if (error.response && error.response.status === 401) {
+        const newToken = await reissueAccessTokenMutation.mutateAsync()
+        if (newToken) {
+          config.headers.Authorization = `Bearer ${newToken}`
+          return axios(config)
+        }
+      }
+      throw error
+    }
+  }
+
+  const googleSignInMutation = useMutation({
+    mutationFn: (credentialResponse) =>
+      axios.post('/api/auth/google', {
         credential: credentialResponse.credential,
-      })
+      }),
+    onSuccess: (res) => {
       setUser(res.data.email)
       setAccessToken(res.data.accessToken)
       console.log('Googleログイン成功', res.data)
-    } catch (error) {
-      console.error('Googleログインでエラーが発生しました:', error)
-    }
-  }
+    },
+    onError: (err) =>
+      console.error('Googleログインでエラーが発生しました:', err),
+  })
 
   return (
     <AuthContext.Provider
       value={{
         accessToken,
         user,
-        signUp,
-        signIn,
-        signOut,
+        signUp: signUpMutation.mutate,
+        signIn: signInMutation.mutate,
+        signOut: signOutMutation.mutate,
         checkAuthStatus,
         authRequest,
-        googleSignIn,
+        googleSignIn: googleSignInMutation.mutate,
       }}
     >
       {children}

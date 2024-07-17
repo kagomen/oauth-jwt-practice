@@ -9,9 +9,7 @@ function SignInForm() {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    await signIn(email, password)
-    // setEmail('')
-    // setPassword('')
+    await signIn({ email, password })
   }
 
   return (
