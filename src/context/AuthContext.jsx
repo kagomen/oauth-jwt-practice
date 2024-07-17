@@ -118,6 +118,19 @@ export function AuthProvider({ children }) {
     [accessToken, reissueAccessToken]
   )
 
+  async function googleSignIn(credentialResponse) {
+    try {
+      const res = await axios.post('/api/auth/google', {
+        credential: credentialResponse.credential,
+      })
+      setUser(res.data.email)
+      setAccessToken(res.data.accessToken)
+      console.log('Googleログイン成功', res.data)
+    } catch (error) {
+      console.error('Googleログインでエラーが発生しました:', error)
+    }
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -128,6 +141,7 @@ export function AuthProvider({ children }) {
         signOut,
         checkAuthStatus,
         authRequest,
+        googleSignIn,
       }}
     >
       {children}

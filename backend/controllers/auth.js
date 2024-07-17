@@ -34,20 +34,29 @@ export const handleGoogleAuth = async (c) => {
   // const token = c.get('token')  // token を取得することで、ユーザに代わってAPIを操作できる。今回はしない。
   const user = c.get('user-google')
 
+  if (!user || !user.email) {
+    return c.json({ message: 'Google認証に失敗しました。' }, 401)
+  }
+
   const email = user.email
 
   let existingUser = await getUser(c, email)
 
-  // もしKVに重複して登録されていなければ保存する
   if (!existingUser) {
-    await saveUser(c, email, { email, googleId: user.id })
-  } else {
-    return c.json({
-      message:
-        '既に登録されたユーザーです。ログインページからメールアドレスとパスワードでログインしてください。もしくは新しいGoogleアカウントで再試行してください。',
-    })
+    // 新規ユーザーの場合、KVに新しくユーザ情報を保存
+    await saveUser(c, email, { email, googleId: user.sub })
+  } else if (existingUser.googleId !== user.sub) {
+    // 既存のユーザーだが、Google認証でログインしたユーザではない場合
+    return c.json(
+      {
+        message:
+          '既に登録されたユーザーです。メールアドレスとパスワードでログインしてください。',
+      },
+      400
+    )
   }
 
+  // ここまでくれば、新規ユーザーか既存のGoogle認証ユーザー
   const accessToken = await createAccessToken(c, email)
   const refreshToken = await createRefreshToken(c, email)
 
@@ -70,7 +79,10 @@ export const signUp = async (c) => {
   const user = await getUser(c, email)
   if (user) {
     if (user?.googleId) {
-      return c.json({ message: 'このGoogleアカウントは既に登録されています' })
+      return c.json(
+        { message: 'このGoogleアカウントは既に登録されています' },
+        401
+      )
     }
     return c.json({ message: 'そのメールアドレスは既に登録済みです' }, 401)
   }
@@ -111,6 +123,16 @@ export const signIn = async (c) => {
   const user = await getUser(c, email)
   if (!user) {
     return c.json({ message: 'そのメールアドレスは登録されていません' }, 401)
+  }
+
+  if (user?.googleId) {
+    return c.json(
+      {
+        message:
+          'このアカウントはGoogleログインで作成されました。Googleログインをお使いください。',
+      },
+      401
+    )
   }
 
   // 入力されたpasswordとKVに保存されたhashedPasswordが同じであるか確認

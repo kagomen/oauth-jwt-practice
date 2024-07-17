@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
+import OAuthButton from './OAuthButton'
 
 function SignUpForm() {
   const [email, setEmail] = useState('')
@@ -33,6 +34,8 @@ function SignUpForm() {
         placeholder="password"
       />
       <button>新規登録</button>
+      <p>または</p>
+      <OAuthButton text={'signup_with'} />
     </form>
   )
 }

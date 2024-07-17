@@ -20,6 +20,6 @@ auth.post('/reissue-access-token', reissueAccessToken)
 
 auth.post('/sign-out', signOut)
 
-auth.get('/google', googleAuthMiddleware, handleGoogleAuth)
+auth.post('/google', googleAuthMiddleware, handleGoogleAuth)
 
 export default auth
