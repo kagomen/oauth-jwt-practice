@@ -72,7 +72,6 @@ export const handleGoogleAuth = async (c) => {
 }
 
 export const signUp = async (c) => {
-  // email, passwordのバリデーションチェック
   const { email, password } = c.req.valid('json')
 
   // KVに既にユーザ登録されていないかを確認

@@ -1,3 +1,11 @@
+## 未解決箇所
+
+- ログアウトして、`setUser(null)` ` setAccessToken(null)` としても、マイページの`Outlet`の情報が消えない
+- ヘッダーは変更が反映されるため、「こんにちは、Guest さん！」が表示される
+- `useEffect`から`useQuery`に変更して、Hook がうまく機能してない模様？
+- ただしページ全体を更新するときちんと処理される
+- `useNavigation`で無理矢理ログインページにリダイレクトさせたら問題なくログアウトされるが、整合性？が取れないのが気になり、そのままにしている……。
+
 ## withCredentials
 
 サーバーサイドと Cookie のやりとりをする場合、axios で option が必要

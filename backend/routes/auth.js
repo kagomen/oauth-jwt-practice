@@ -12,9 +12,35 @@ import { googleAuthMiddleware } from '../middleware/googleAuth'
 
 const auth = new Hono()
 
-auth.post('/sign-up', zValidator('json', userSchema), signUp)
+auth.post(
+  '/sign-up',
+  zValidator('json', userSchema, (result, c) => {
+    if (!result.success) {
+      return c.json(
+        {
+          message: '正しい形式でメールアドレスとパスワードを入力してください',
+        },
+        400
+      )
+    }
+  }),
+  signUp
+)
 
-auth.post('/sign-in', zValidator('json', userSchema), signIn)
+auth.post(
+  '/sign-in',
+  zValidator('json', userSchema, (result, c) => {
+    if (!result.success) {
+      return c.json(
+        {
+          message: '正しい形式でメールアドレスとパスワードを入力してください',
+        },
+        400
+      )
+    }
+  }),
+  signIn
+)
 
 auth.post('/reissue-access-token', reissueAccessToken)
 

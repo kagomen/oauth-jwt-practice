@@ -42,7 +42,10 @@ export function AuthProvider({ children }) {
     onError: (err) => {
       setAccessToken(null)
       setUser(null)
-      console.error('リフレッシュトークンを無効化できませんでした', err)
+      console.error(
+        'リフレッシュトークンを無効化できませんでした',
+        err.response.data.message
+      )
     },
   })
 
@@ -59,7 +62,10 @@ export function AuthProvider({ children }) {
       console.log('アクセストークンを再発行しました')
     },
     onError: (err) => {
-      console.error('アクセストークンの再発行に失敗しました', err)
+      console.error(
+        'アクセストークンの再発行に失敗しました',
+        err.response.data.message
+      )
       signOutMutation.mutate()
     },
   })
@@ -81,7 +87,10 @@ export function AuthProvider({ children }) {
           console.log('アクセストークンは有効です')
         }
       }
-      return { isAuthenticated: !!accessToken }
+      if (!accessToken) {
+        throw new Error('認証に失敗しました')
+      }
+      return { isAuthenticated: true } // checkAuthStatus.data?.isAuthenticatedで認証状態を呼び出せる
     },
     enabled: true, // 自動リフェッチを有効
     retry: false,
@@ -128,7 +137,10 @@ export function AuthProvider({ children }) {
       console.log('Googleログイン成功', res.data)
     },
     onError: (err) =>
-      console.error('Googleログインでエラーが発生しました:', err),
+      console.error(
+        'Googleログインでエラーが発生しました:',
+        err.response.data.message
+      ),
   })
 
   return (
@@ -136,8 +148,8 @@ export function AuthProvider({ children }) {
       value={{
         accessToken,
         user,
-        signUp: signUpMutation.mutate,
-        signIn: signInMutation.mutate,
+        signUpMutation,
+        signInMutation,
         signOut: signOutMutation.mutate,
         checkAuthStatus,
         authRequest,
